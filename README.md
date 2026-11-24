@@ -113,12 +113,12 @@ Step 04  extract_raw_sa_reads
          Raw Primary/SA alignment pairs; multi-SA reads are excluded
                 |
                 v
-Step 05  identify_split_read_deletions
-         Same chromosome + same strand + CIGAR-based DEL interval
+Step 05  annotate_split_read_breakpoints
+         Add deletion coordinates/status to split_reads.tsv in place
                 |
                 v
-Step 06  cluster_split_deletion_events
-         Cluster assignments and PASS/LowSupport summaries
+Step 06  cluster_valid_split_read_deletions
+         PASS deletion records -> split_clusters.tsv only
                 |
                 +---------------------------------------+
                 |                                       |
@@ -128,7 +128,7 @@ Step 08  plot_tlen_distribution                        Direct BAM parsing and fi
          Optional library QC                            |
                                                        v
                                              Step 10  cluster_discordant_pairs
-                                                       Cluster assignments and summaries
+                                                       Cluster summaries only
                 \                                       /
                  \                                     /
                   v                                   v
@@ -183,9 +183,9 @@ For each split interval, overlapping CUSUM depth intervals are combined. Depth s
 
 Split-read analysis is separated into three steps:
 
-1. `ExtractSASplitReads.pl` writes raw Primary/SA alignment information to `split_reads.tsv`. It keeps only reads with exactly one valid SA entry and does not assign deletion intervals or cluster IDs.
-2. `IdentifyIntragenicDeletions.pl` retains same-chromosome, same-strand records and infers the deletion interval from the Primary alignment CIGAR side and the Primary/SA reference coordinates. It writes read-level events to `split_deletion_events.tsv`.
-3. `ClusterSASplitReads.pl` groups deletion events using `SA_SPLIT_CLUSTER_WINDOW`, writes `split_cluster_assignments.tsv`, and summarizes all clusters in `split_clusters.tsv`.
+1. `ExtractSASplitReads.pl` writes raw Primary/SA alignment information to `split_reads.tsv`. It keeps only reads with exactly one valid SA entry.
+2. `IdentifyIntragenicDeletions.pl` annotates each row in `split_reads.tsv` in place. It adds the inferred deletion interval, junction type, breakpoint status, and breakpoint reason while retaining all raw read records. The input and output paths are intentionally the same, and the script uses a temporary file before replacing the original.
+3. `ClusterSASplitReads.pl` reads the annotated `split_reads.tsv` and clusters only rows with `Breakpoint_Status=PASS`, `Junction_Type=Deletion_Gap`, and `Breakpoint_Reason=Valid_Deletion_Gap`. It writes only the cluster summary `split_clusters.tsv`; no event or assignment table is generated.
 
 A cluster passes when it contains at least `SA_SPLIT_MIN_SUPPORT_READS` unique supporting read names. Only `Pass` clusters are used as candidate backbones in S5.
 
@@ -194,7 +194,7 @@ A cluster passes when it contains at least `SA_SPLIT_MIN_SUPPORT_READS` unique s
 Discordant analysis is separated into two steps while preserving the existing filtering and clustering rules:
 
 1. `ExtractDiscordantPairs.pl` parses the target BAM directly, applies the existing basic SAM flag, MAPQ, optional duplicate, same-chromosome, positive-TLEN, minimum insert-size, optional FR-orientation, and valid-interval filters, then writes one retained record per read pair to `discordant_pairs.tsv`. It also calculates the existing inner-gap interval. No intermediate raw paired-alignment TSV is written.
-2. `ClusterDiscordantReads.pl` applies the existing coordinate-distance clustering and minimum unique-pair support rule. It writes `discordant_cluster_assignments.tsv` and `discordant_clusters.tsv`.
+2. `ClusterDiscordantReads.pl` applies the existing coordinate-distance clustering and minimum unique-pair support rule. It writes only `discordant_clusters.tsv`; no per-pair assignment table is generated.
 
 This refactor combines BAM extraction and Discordant filtering into one pass. It does not change the existing filtering thresholds, interval calculation, or clustering criteria. S5 continues to compare the resulting PASS discordant-cluster intervals with split-read candidate intervals using `EVIDENCE_OVERLAP_FRACTION`.
 
@@ -646,24 +646,21 @@ of the standard workflow; optional utility scripts are located in
 
 | File | Description |
 |---|---|
-| `split_reads.tsv` | Raw Primary/SA alignment pairs. Exactly one SA alignment is required. No DEL interval or cluster fields are present. |
-| `split_deletion_events.tsv` | Read-level deletion events retained after same-chromosome, same-strand, and CIGAR-based interval inference. |
-| `split_cluster_assignments.tsv` | Mapping from `Event_ID` to `Cluster_ID` and `Cluster_Status`. |
-| `split_clusters.tsv` | Cluster summaries, including both `Pass` and `LowSupport` clusters. |
+| `split_reads.tsv` | Raw Primary/SA alignment fields plus read-level breakpoint/deletion annotations added in place. All extracted rows are retained. No `Cluster_ID` is written. |
+| `split_clusters.tsv` | Cluster summaries from valid deletion-gap records, including both `Pass` and `LowSupport` clusters. |
 
-`split_reads.tsv` contains the 16 raw alignment fields: SampleID, Read_Name, Flag, Primary_Chrom/Start/End/CIGAR/MAPQ/Strand, and SA_Chrom/Start/End/CIGAR/MAPQ/Strand/NM. Multiple-SA reads are excluded during extraction. This stage does not filter by HCM gene intervals; gene annotation is deferred to S6. The raw file has no `Cluster_ID`; event-to-cluster mapping is written separately to `split_cluster_assignments.tsv`.
+`split_reads.tsv` starts with the 16 raw alignment fields: SampleID, Read_Name, Flag, Primary_Chrom/Start/End/CIGAR/MAPQ/Strand, and SA_Chrom/Start/End/CIGAR/MAPQ/Strand/NM. Step 05 appends Primary/SA segment roles, breakpoints, the inferred deletion interval, `Junction_Type`, `Breakpoint_Status`, and `Breakpoint_Reason`. Multiple-SA reads are excluded during extraction. All extracted rows are retained during annotation. The file has no `Cluster_ID`; S3 clustering writes only the summary table.
 
 ### `S4_DiscordantReads/`
 
 | File | Description |
 |---|---|
 | `discordant_pairs.tsv` | Filtered read-pair records passing the existing Discordant criteria. Contains the existing inner-gap `Start`, `End`, and `Size_bp`, but no cluster fields. |
-| `discordant_cluster_assignments.tsv` | Mapping from `Pair_ID` to `Cluster_ID` and `Cluster_Status`. |
 | `discordant_clusters.tsv` | Cluster summaries, including `Pass` and `LowSupport` clusters. |
 | `tlen_summary.tsv` | TLEN summary statistics when `RUN_TLEN_QC=1`. |
 | `tlen_distribution.pdf` | TLEN distribution plot when `RUN_TLEN_QC=1`. |
 
-The two processing stages are `ExtractDiscordantPairs.pl` and `ClusterDiscordantReads.pl`. BAM parsing and the existing Discordant filters are performed in one pass. The filtering thresholds, FR-orientation option, inner-gap interval calculation, cluster-distance rule, and minimum support rule are unchanged. Cluster IDs and statuses are stored separately in the assignment table rather than repeated in the read-pair table.
+The two processing stages are `ExtractDiscordantPairs.pl` and `ClusterDiscordantReads.pl`. BAM parsing and the existing Discordant filters are performed in one pass. The filtering thresholds, FR-orientation option, inner-gap interval calculation, cluster-distance rule, and minimum support rule are unchanged. The cluster summary stores the observed coordinate ranges. The plotting script reconstructs pair-to-cluster links from these ranges, so no assignment table is required.
 
 ### `S5_Candidates/`
 
@@ -907,12 +904,11 @@ perl "$PROJECT_ROOT/bin/ExtractSASplitReads.pl" \
 
 perl "$PROJECT_ROOT/bin/IdentifyIntragenicDeletions.pl" \
   --Input "$PROJECT_ROOT/results/SAMPLE/S3_SplitReads/split_reads.tsv" \
-  --Out "$PROJECT_ROOT/results/SAMPLE/S3_SplitReads/split_deletion_events.tsv"
+  --Out "$PROJECT_ROOT/results/SAMPLE/S3_SplitReads/split_reads.tsv"
 
 perl "$PROJECT_ROOT/bin/ClusterSASplitReads.pl" \
   --Config "$PROJECT_ROOT/conf/hcm_exondel.conf" \
-  --Input "$PROJECT_ROOT/results/SAMPLE/S3_SplitReads/split_deletion_events.tsv" \
-  --AssignmentsOut "$PROJECT_ROOT/results/SAMPLE/S3_SplitReads/split_cluster_assignments.tsv" \
+  --Input "$PROJECT_ROOT/results/SAMPLE/S3_SplitReads/split_reads.tsv" \
   --ClustersOut "$PROJECT_ROOT/results/SAMPLE/S3_SplitReads/split_clusters.tsv"
 ```
 
@@ -928,7 +924,6 @@ perl "$PROJECT_ROOT/bin/ExtractDiscordantPairs.pl" \
 perl "$PROJECT_ROOT/bin/ClusterDiscordantReads.pl" \
   --Config "$PROJECT_ROOT/conf/hcm_exondel.conf" \
   --Input "$PROJECT_ROOT/results/SAMPLE/S4_DiscordantReads/discordant_pairs.tsv" \
-  --AssignmentsOut "$PROJECT_ROOT/results/SAMPLE/S4_DiscordantReads/discordant_cluster_assignments.tsv" \
   --ClustersOut "$PROJECT_ROOT/results/SAMPLE/S4_DiscordantReads/discordant_clusters.tsv"
 ```
 

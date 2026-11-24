@@ -471,6 +471,120 @@ def map_discordant_pairs_to_clusters(pair_df, cluster_df):
     return result.dropna(subset=["Cluster_ID"]).copy()
 
 
+def map_split_reads_to_clusters(split_df, cluster_df):
+    """Reconstruct split-read-to-cluster links from cluster coordinate ranges.
+
+    S3 intentionally writes no per-read assignment table. Membership is
+    recovered from the observed Start_Range and End_Range in split_clusters.tsv.
+    """
+
+    required_split = {
+        "Read_Name", "Chrom", "Start", "End",
+        "Primary_Start", "Primary_End", "SA_Start", "SA_End",
+        "Junction_Type", "Breakpoint_Status", "Breakpoint_Reason",
+    }
+    required_cluster = {
+        "Cluster_ID", "Cluster_Status", "Chrom", "Start", "End",
+        "Start_Range", "End_Range",
+    }
+
+    missing_split = required_split.difference(split_df.columns)
+    missing_cluster = required_cluster.difference(cluster_df.columns)
+    if missing_split:
+        die("split_reads.tsv missing columns: " + ", ".join(sorted(missing_split)))
+    if missing_cluster:
+        die("split_clusters.tsv missing columns: " + ", ".join(sorted(missing_cluster)))
+
+    eligible = split_df[
+        split_df["Breakpoint_Status"].astype(str).eq("PASS")
+        & split_df["Junction_Type"].astype(str).eq("Deletion_Gap")
+        & split_df["Breakpoint_Reason"].astype(str).eq("Valid_Deletion_Gap")
+    ].copy()
+
+    if eligible.empty:
+        eligible["Cluster_ID"] = pd.Series(dtype="object")
+        eligible["Cluster_Status"] = pd.Series(dtype="object")
+        return eligible
+
+    clusters_by_chrom = {}
+    for _, cluster in cluster_df.iterrows():
+        try:
+            start_min, start_max = [
+                int(x) for x in str(cluster["Start_Range"]).split("-", 1)
+            ]
+            end_min, end_max = [
+                int(x) for x in str(cluster["End_Range"]).split("-", 1)
+            ]
+            center_start = int(cluster["Start"])
+            center_end = int(cluster["End"])
+        except (TypeError, ValueError):
+            die(
+                "Invalid coordinate range in split cluster "
+                f"{cluster.get('Cluster_ID', 'NA')}"
+            )
+
+        clusters_by_chrom.setdefault(str(cluster["Chrom"]), []).append({
+            "Cluster_ID": str(cluster["Cluster_ID"]),
+            "Cluster_Status": str(cluster["Cluster_Status"]),
+            "Start_Min": start_min,
+            "Start_Max": start_max,
+            "End_Min": end_min,
+            "End_Max": end_max,
+            "Center_Start": center_start,
+            "Center_End": center_end,
+        })
+
+    cluster_ids = []
+    cluster_statuses = []
+    unmatched = 0
+
+    for _, record in eligible.iterrows():
+        try:
+            record_start = int(record["Start"])
+            record_end = int(record["End"])
+        except (TypeError, ValueError):
+            cluster_ids.append(pd.NA)
+            cluster_statuses.append(pd.NA)
+            unmatched += 1
+            continue
+
+        candidates = [
+            cluster
+            for cluster in clusters_by_chrom.get(str(record["Chrom"]), [])
+            if cluster["Start_Min"] <= record_start <= cluster["Start_Max"]
+            and cluster["End_Min"] <= record_end <= cluster["End_Max"]
+        ]
+
+        if not candidates:
+            cluster_ids.append(pd.NA)
+            cluster_statuses.append(pd.NA)
+            unmatched += 1
+            continue
+
+        selected = min(
+            candidates,
+            key=lambda cluster: (
+                abs(record_start - cluster["Center_Start"])
+                + abs(record_end - cluster["Center_End"]),
+                cluster["Cluster_ID"],
+            ),
+        )
+        cluster_ids.append(selected["Cluster_ID"])
+        cluster_statuses.append(selected["Cluster_Status"])
+
+    result = eligible.copy()
+    result["Cluster_ID"] = cluster_ids
+    result["Cluster_Status"] = cluster_statuses
+
+    if unmatched:
+        info(
+            f"{unmatched} split-read records could not be mapped to a cluster "
+            "and will be excluded from cluster-level plotting"
+        )
+
+    return result.dropna(subset=["Cluster_ID"]).copy()
+
+
 # ============================================================
 # GTF
 # ============================================================
@@ -817,19 +931,11 @@ def discover_files(
         )
     )
 
-    files["split_events"] = (
+    files["split_reads"] = (
         find_exact_or_recursive(
             input_dir,
-            Path("S3_SplitReads") / "split_deletion_events.tsv",
-            ["split_deletion_events.tsv"]
-        )
-    )
-
-    files["split_assignments"] = (
-        find_exact_or_recursive(
-            input_dir,
-            Path("S3_SplitReads") / "split_cluster_assignments.tsv",
-            ["split_cluster_assignments.tsv"]
+            Path("S3_SplitReads") / "split_reads.tsv",
+            ["split_reads.tsv"]
         )
     )
 
@@ -3042,10 +3148,6 @@ def main():
 
         "split_cluster",
 
-        "split_events",
-
-        "split_assignments",
-
         "dr_cluster",
 
         "dr_pairs",
@@ -3095,12 +3197,10 @@ def main():
         ]
     )
 
-    sr_event_df = read_tsv(files["split_events"])
-    sr_assignment_df = read_tsv(files["split_assignments"])
-    sr_raw_df = sr_event_df.merge(
-        sr_assignment_df,
-        on="Event_ID",
-        how="inner"
+    sr_reads_df = read_tsv(files["split_reads"])
+    sr_raw_df = map_split_reads_to_clusters(
+        sr_reads_df,
+        sr_cluster_df
     )
 
     dr_cluster_df = read_tsv(

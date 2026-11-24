@@ -1,28 +1,26 @@
 # Final downstream workflow review: S3-S6
 
-## Fixed design decisions
+## Current interface contract
 
-1. S3 split-read processing is separated into raw SA extraction, deletion-event identification, and clustering.
-2. Reads with more than one SA entry are excluded during raw extraction.
-3. `split_reads.tsv` contains only the 16 raw Primary/SA alignment fields and has no event or cluster identifiers.
-4. `IdentifyIntragenicDeletions.pl` applies same-chromosome and same-strand checks, then uses the Primary CIGAR terminal/leading soft clip to determine the alignment order and calculate the positive reference gap.
-5. S4 Discordant processing parses the target BAM directly, applies the existing SAM flag/MAPQ/duplicate filters, same-chromosome check, positive-TLEN selection, minimum insert-size threshold, optional FR orientation, inner-gap interval calculation, and deduplication in one pass, then performs clustering separately. Existing thresholds and clustering rules are retained. `ClusterDiscordantReads.pl` also snapshots records when closing each cluster so assignments remain linked to the correct `Pair_ID` across multiple clusters.
-6. S4 cluster identifiers and statuses are written to a separate assignment table, not repeated in the complete read-pair table.
+1. S3 raw SA extraction writes one row per primary alignment with exactly one valid SA entry to `split_reads.tsv`.
+2. `IdentifyIntragenicDeletions.pl` annotates `split_reads.tsv` in place. It retains every extracted row and appends segment roles, breakpoints, deletion coordinates, junction type, breakpoint status, and breakpoint reason. It uses a temporary file before replacing the input.
+3. `ClusterSASplitReads.pl` reads the annotated `split_reads.tsv` directly. Only rows with `Breakpoint_Status=PASS`, `Junction_Type=Deletion_Gap`, and `Breakpoint_Reason=Valid_Deletion_Gap` enter clustering. It writes only `split_clusters.tsv`; no event or assignment TSV is generated.
+4. S4 Discordant processing parses the target BAM directly, applies the existing SAM flag/MAPQ/duplicate filters, same-chromosome check, positive-TLEN selection, minimum insert-size threshold, optional FR orientation, inner-gap interval calculation, and deduplication in one pass. The existing thresholds and filtering rules are retained.
+5. `ClusterDiscordantReads.pl` reads `discordant_pairs.tsv` and writes only `discordant_clusters.tsv`. The coordinate-distance clustering algorithm and minimum unique-pair support rule are unchanged. No assignment TSV is generated.
+6. The plotting script reconstructs split-read and discordant-pair cluster membership from the observed coordinate ranges in the respective cluster summaries. If ranges overlap, it selects the nearest median interval.
 7. S5 remains split-read-centered. Depth and Discordant intervals are compared with each passing Split interval using the existing overlap-fraction rule.
 8. The `Evidence_Level` rule is unchanged:
    - High: Split + Depth + Discordant.
    - Moderate: Split + Depth, without qualifying Discordant support.
    - Low: Split without sufficient Depth support, regardless of Discordant support.
-9. S5 no longer performs provisional gene/transcript assignment. S6 performs the MANE-based gene, transcript, region, and exon annotation.
-10. S6 writes a compact 20-column final report.
+9. S5 does not perform provisional gene/transcript assignment. S6 performs the MANE-based gene, transcript, region, and exon annotation.
+10. S6 writes the final annotated candidate report.
 
 ## Final S3 outputs
 
 ```text
 S3_SplitReads/
 ├── split_reads.tsv
-├── split_deletion_events.tsv
-├── split_cluster_assignments.tsv
 └── split_clusters.tsv
 ```
 
@@ -31,7 +29,6 @@ S3_SplitReads/
 ```text
 S4_DiscordantReads/
 ├── discordant_pairs.tsv
-├── discordant_cluster_assignments.tsv
 ├── discordant_clusters.tsv
 ├── tlen_summary.tsv
 └── tlen_distribution.pdf
@@ -56,16 +53,17 @@ S6_Report/
 └── annotated_candidates.tsv
 ```
 
-## Verification performed
+## Validation status
 
-- Perl syntax check for the main script and all Perl scripts.
-- Python bytecode compilation for the Python scripts.
-- Synthetic SAM test for S3 raw extraction, multi-SA exclusion, deletion-event interval inference, event assignments, and cluster summary.
-- Synthetic SAM parity tests confirming that the new one-pass `ExtractDiscordantPairs.pl` produces a `discordant_pairs.tsv` identical to the previous two-step implementation under the default settings, with FR-orientation filtering disabled, and with duplicate exclusion disabled.
-- Synthetic SAM test for S4 current filtering criteria, Pair_ID assignment, cluster assignments, and cluster summary, including multiple clusters to verify each Pair_ID maps to its correct Cluster_ID. Cluster summary values were unchanged from the previous clustering implementation; the previously incorrect assignment-table reference mapping was corrected.
-- Empty-input test confirming that S4 still writes header-only pair, assignment, and cluster tables.
-- Synthetic S5 integration test covering High, Moderate, and Low; the observed categories matched the unchanged Evidence_Level rule.
-- Synthetic S6 annotation test covering Exonic, Flanking, and Intergenic events, including concise affected-exon labels.
-- Main-script shell generation test using an hg38 annotation selection; the generated sample shell passed `bash -n` and contained the revised S3-S6 commands.
+This interface synchronization has been reviewed against the current S3/S4 script arguments and the S5/S6 input schemas. A complete rerun of sample `25B09089386` still requires access to the original BAM and the configured reference/annotation files in the HPC environment.
 
-These are code-level and synthetic-data checks. They do not replace a complete run on real WGS BAM data or clinical validation of the candidate intervals.
+Before treating the sample as successfully rerun, perform:
+
+- Perl syntax checks for `WGSExonDel.pl` and all Perl modules.
+- Python bytecode compilation for `PlotHCMExonDelMultiTrack.py`.
+- S3 synthetic-data test covering valid deletion gaps, filtered reasons, clustering, and header-only output.
+- S4 synthetic-data test covering multiple clusters, coordinate ranges, minimum support, and header-only output.
+- S5/S6 integration checks confirming the existing candidate schema and unchanged `Evidence_Level` rule.
+- Full `25B09089386` rerun on HPC, followed by comparison of the FHOD3 candidate coordinates and supporting evidence with the previously reviewed result.
+
+These checks are distinct from clinical validation of candidate intervals.

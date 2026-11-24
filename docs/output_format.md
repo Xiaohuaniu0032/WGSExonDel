@@ -117,13 +117,11 @@ plotting script does not maintain an independent hard-coded threshold.
 
 ## S3_SplitReads
 
-The split-read workflow has three separate stages: raw SA extraction, deletion-event identification, and event clustering.
+S3 writes two files. The read-level file is annotated in place, and the clustering step writes a cluster summary only.
 
 ```text
 S3_SplitReads/
 ├── split_reads.tsv
-├── split_deletion_events.tsv
-├── split_cluster_assignments.tsv
 └── split_clusters.tsv
 ```
 
@@ -131,9 +129,9 @@ All genomic coordinates use 1-based, closed intervals.
 
 ### `split_reads.tsv`
 
-One row represents one primary alignment with exactly one valid SA alignment. Reads with multiple SA entries are excluded during extraction. This table contains raw alignment information only; it does not contain deletion coordinates, `Event_ID`, `Cluster_ID`, or `Cluster_Status`.
+One row represents one primary alignment with exactly one valid SA alignment. Reads with multiple SA entries are excluded during extraction.
 
-The 16 columns are:
+Step 04 initially writes the 16 raw Primary/SA alignment fields:
 
 ```text
 SampleID
@@ -154,16 +152,17 @@ SA_Strand
 SA_NM
 ```
 
-`Primary_End` and `SA_End` are calculated from the corresponding alignment start and the reference-consuming CIGAR length.
+Step 05, `IdentifyIntragenicDeletions.pl`, annotates this same file in place using a temporary output file and an atomic rename. All input read rows are retained. The following derived columns are appended:
 
-### `split_deletion_events.tsv`
-
-One row represents one read-level deletion event retained by `IdentifyIntragenicDeletions.pl`. The script applies these checks in order:
-
-1. `Primary_Chrom` must equal `SA_Chrom`.
-2. `Primary_Strand` must equal `SA_Strand`.
-3. The Primary CIGAR must have a terminal or leading soft clip. A terminal `S` means the Primary alignment is treated as the left alignment and the SA alignment as the right alignment. A leading `S` means the SA alignment is treated as left and the Primary alignment as right.
-4. The positive reference gap between the two alignment intervals is reported as the deletion interval.
+| Column | Description |
+|---|---|
+| `Primary_Segment_Role`, `SA_Segment_Role` | Whether the Primary and SA alignments represent the left or right segment of the putative deletion junction. |
+| `Left_Breakpoint`, `Right_Breakpoint` | Reference coordinates flanking the inferred deletion gap. |
+| `Chrom`, `Start`, `End`, `Size_bp` | Inferred deletion interval and length. |
+| `Strand` | Shared Primary/SA strand for valid deletion-gap records. |
+| `Junction_Type` | `Deletion_Gap` for valid deletion-gap records; otherwise `NA`. |
+| `Breakpoint_Status` | `PASS` for valid deletion-gap records; `Filtered` for other records. |
+| `Breakpoint_Reason` | `Valid_Deletion_Gap`, `Different_Chromosome`, `Different_Strand`, or `Other`. |
 
 For Primary-left events:
 
@@ -179,46 +178,32 @@ Start = SA_End + 1
 End   = Primary_Start - 1
 ```
 
-Rows with non-positive intervals are excluded. Despite the script name, no HCM target-gene overlap check, gene-list filtering, or transcript annotation is performed at this stage; gene annotation is deferred to S6.
-
-Columns:
-
-| Column | Description |
-|---|---|
-| `Event_ID` | Unique read-level deletion event identifier (`SR_EVENT_######`). |
-| `SampleID`, `Read_Name` | Sample and read identifiers. |
-| `Chrom`, `Start`, `End`, `Size_bp` | Inferred deletion interval and length. |
-| `Strand` | Shared Primary/SA strand. |
-| `Primary_Chrom`, `Primary_Start`, `Primary_End`, `Primary_CIGAR`, `Primary_MAPQ`, `Primary_Strand` | Primary alignment details. |
-| `SA_Chrom`, `SA_Start`, `SA_End`, `SA_CIGAR`, `SA_MAPQ`, `SA_Strand`, `SA_NM` | SA alignment details. |
-
-### `split_cluster_assignments.tsv`
-
-One row maps one `Event_ID` to its cluster.
-
-| Column | Description |
-|---|---|
-| `Event_ID` | Read-level deletion event identifier. |
-| `Cluster_ID` | Assigned split-read cluster identifier (`SR_CLUSTER_######`). |
-| `Cluster_Status` | `Pass` or `LowSupport`. |
+The interval is 1-based and closed, with `Size_bp = End - Start + 1`. No HCM target-gene overlap check or transcript annotation is performed at this stage; gene annotation is deferred to S6.
 
 ### `split_clusters.tsv`
 
-One row represents one cluster. Both `Pass` and `LowSupport` clusters are retained. S5 uses only `Pass` clusters.
+`ClusterSASplitReads.pl` reads the annotated `split_reads.tsv` directly. Only records satisfying all three conditions enter clustering:
+
+- `Breakpoint_Status=PASS`
+- `Junction_Type=Deletion_Gap`
+- `Breakpoint_Reason=Valid_Deletion_Gap`
+
+All other read-level rows remain in `split_reads.tsv` but are excluded from clustering. One row in `split_clusters.tsv` represents one cluster. Both `Pass` and `LowSupport` clusters are retained; S5 uses only `Pass` clusters.
 
 | Column | Description |
 |---|---|
 | `SampleID` | Sample identifier. |
-| `Cluster_ID` | Unique cluster identifier within the sample. |
+| `Cluster_ID` | Unique cluster identifier (`SR_CLUSTER_######`). |
 | `Chrom` | Chromosome. |
 | `Start`, `End`, `Size_bp` | Median cluster interval and its length. |
 | `Support_Reads` | Number of unique read names supporting the cluster. |
-| `Support_Records` | Number of unique read-level deletion events in the cluster. |
-| `Start_Range`, `End_Range` | Minimum-to-maximum event boundaries. |
-| `Mean_Size_bp` | Mean deletion-event length. |
-| `Size_Range_bp` | Minimum-to-maximum event length. |
-| `Primary_Strand_Count`, `SA_Strand_Count` | Strand counts among supporting events. |
+| `Support_Records` | Number of read-level deletion records in the cluster. |
+| `Start_Range`, `End_Range` | Minimum-to-maximum deletion boundaries among supporting records. |
+| `Mean_Size_bp` | Mean deletion-record length. |
+| `Size_Range_bp` | Minimum-to-maximum deletion-record length. |
 | `Cluster_Status` | `Pass` when `Support_Reads` meets `SA_SPLIT_MIN_SUPPORT_READS`; otherwise `LowSupport`. |
+
+No per-read assignment table is generated. The plotting script reconstructs read-to-cluster links from chromosome and the observed start/end ranges in the cluster summary, selecting the nearest median interval if ranges overlap.
 
 ## S4_DiscordantReads
 
@@ -227,7 +212,6 @@ The Discordant workflow parses the target BAM directly, applies the existing rea
 ```text
 S4_DiscordantReads/
 ├── discordant_pairs.tsv
-├── discordant_cluster_assignments.tsv
 ├── discordant_clusters.tsv
 ├── tlen_summary.tsv              # when RUN_TLEN_QC=1
 └── tlen_distribution.pdf         # when RUN_TLEN_QC=1
@@ -265,24 +249,14 @@ Columns:
 
 No `Cluster_ID` or `Cluster_Status` is written into this file.
 
-### `discordant_cluster_assignments.tsv`
-
-One row maps one `Pair_ID` to its cluster.
-
-| Column | Description |
-|---|---|
-| `Pair_ID` | Filtered read-pair identifier. |
-| `Cluster_ID` | Assigned cluster identifier (`DR_CLUSTER_######`). |
-| `Cluster_Status` | `Pass` or `LowSupport`. |
-
 ### `discordant_clusters.tsv`
 
-One row represents one cluster. Both `Pass` and `LowSupport` clusters are retained. S5 uses only `Pass` clusters.
+`ClusterDiscordantReads.pl` reads `discordant_pairs.tsv` and writes only the cluster summary. One row represents one cluster. Both `Pass` and `LowSupport` clusters are retained. S5 uses only `Pass` clusters.
 
 | Column | Description |
 |---|---|
 | `SampleID` | Sample identifier. |
-| `Cluster_ID` | Cluster identifier. |
+| `Cluster_ID` | Cluster identifier (`DR_CLUSTER_######`). |
 | `Chrom` | Chromosome. |
 | `Start`, `End`, `Size_bp` | Median cluster interval and length, using the existing interval definition. |
 | `Support_Pairs` | Number of unique read-pair names supporting the cluster. |
@@ -291,6 +265,8 @@ One row represents one cluster. Both `Pass` and `LowSupport` clusters are retain
 | `Insert_Size_Range` | Minimum-to-maximum absolute TLEN. |
 | `Pair_Orientation_Count` | Counts by pair orientation. |
 | `Cluster_Status` | `Pass` when `Support_Pairs` meets `MIN_DISCORDANT_PAIRS`; otherwise `LowSupport`. |
+
+No per-pair assignment table is generated. The plotting script reconstructs pair-to-cluster links from chromosome and the observed start/end ranges in the cluster summary, selecting the nearest median interval if ranges overlap.
 
 ### TLEN quality control
 
