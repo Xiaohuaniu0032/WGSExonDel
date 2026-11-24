@@ -1,0 +1,2 @@
+SampleID	Candidate_ID	Split_Cluster_ID	Chrom	Start	End	Size_bp	Split_Reads	Depth_Support	Depth_Covered_Bases	Depth_Coverage_Fraction	Depth_Candidate_Count	Discordant_Support	Discordant_Pairs	Discordant_Overlap_Fraction	Discordant_Cluster_Count	Median_Insert_Size	Evidence_Types	Evidence_Level
+25B09089386	CANDIDATE_000001	SR_CLUSTER_000003	chr18	34232240	34241309	9070	16	Yes	9065	0.9994	2	Yes	21	1.0000	1	9383.00	Split,Depth,Discordant	High

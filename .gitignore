@@ -1,0 +1,11 @@
+# Generated per-sample analysis files
+test/results/*/run_*.sh
+test/results/*/logs/
+test/results/*/S1_TargetBam/*.bam
+test/results/*/S1_TargetBam/*.bam.bai
+test/results/*/S2_Depth/gene_depth/*
+
+# Simulation outputs
+simulate_fq/
+random_gene_del_sim/
+

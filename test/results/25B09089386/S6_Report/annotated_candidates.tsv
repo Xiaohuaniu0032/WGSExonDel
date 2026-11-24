@@ -1,0 +1,2 @@
+SampleID	Candidate_ID	Gene	Gene_Classification	Transcript	Region_Type	Chrom	Start	End	Size_bp	Affected_Exons	Fully_Covered_Exons	Split_Reads	Depth_Support	Depth_Coverage_Fraction	Discordant_Support	Discordant_Pairs	Discordant_Overlap_Fraction	Median_Insert_Size	Evidence_Level
+25B09089386	CANDIDATE_000001	FHOD3	Definitive	NM_001281740	Exonic	chr18	34232240	34241309	9070	EX12,EX13,EX14	EX12,EX13,EX14	16	Yes	0.9994	Yes	21	1.0000	9383.00	High

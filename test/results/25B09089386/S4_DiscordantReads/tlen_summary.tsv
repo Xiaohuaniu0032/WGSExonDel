@@ -1,0 +1,2 @@
+SampleID	Total_Read_Pairs	Mean_Insert_Size	SD_Insert_Size	Median_Insert_Size	MAD	MAD_Scale	Robust_SD	N_MAD	Abnormal_TLEN_Threshold	Q1	Q3	P95	P99	Plot_Upper_P99_5
+25B09089386	178732	276.392	62.558	271.000	40.000	1.483	59.304	3	448.912	233.000	314.000	388.000	447.000	470.000
