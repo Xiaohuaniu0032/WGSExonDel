@@ -7,12 +7,11 @@ use File::Basename qw(dirname);
 use File::Path qw(make_path);
 use Cwd qw(abs_path);
 
-my ($config, $input, $assignments_out, $clusters_out, $help);
+my ($config, $input, $clusters_out, $help);
 GetOptions(
-    'Config=s'         => \$config,
-    'Input=s'          => \$input,
-    'AssignmentsOut=s' => \$assignments_out,
-    'ClustersOut=s'    => \$clusters_out,
+    'Config=s'      => \$config,
+    'Input=s'       => \$input,
+    'ClustersOut=s' => \$clusters_out,
     'Help'             => \$help,
 ) or die usage();
 
@@ -21,8 +20,7 @@ if ($help) {
     exit 0;
 }
 
-die usage() unless defined $config && defined $input
-    && defined $assignments_out && defined $clusters_out;
+die usage() unless defined $config && defined $input && defined $clusters_out;
 
 $config = abs_path($config) if -e $config;
 $input  = abs_path($input)  if -e $input;
@@ -32,14 +30,9 @@ die "[ERROR] Input not found: $input\n" unless defined $input && -s $input;
 die "[ERROR] Config and input paths must be absolute\n"
     unless $config =~ m{^/} && $input =~ m{^/};
 
-die "[ERROR] Output paths must be absolute\n"
-    unless $assignments_out =~ m{^/} && $clusters_out =~ m{^/};
-die "[ERROR] Output paths must differ\n"
-    if $assignments_out eq $clusters_out;
-
-for my $path ($assignments_out, $clusters_out) {
-    make_path(dirname($path)) unless -d dirname($path);
-}
+die "[ERROR] Output path must be absolute\n"
+    unless $clusters_out =~ m{^/};
+make_path(dirname($clusters_out)) unless -d dirname($clusters_out);
 
 my %conf = read_config($config);
 my $cluster_distance = required_config(\%conf, 'DISCORDANT_CLUSTER_DISTANCE');
@@ -55,7 +48,6 @@ for my $cluster (@clusters) {
         $cluster->{Support_Pairs} >= $min_support_pairs ? 'Pass' : 'LowSupport';
 }
 
-write_assignments($assignments_out, \@clusters);
 write_clusters($clusters_out, \@clusters);
 
 print STDERR "[INFO] Input filtered pairs: $input_count\n";
@@ -65,7 +57,6 @@ print STDERR "[INFO] PASS clusters: ",
     scalar(grep { $_->{Cluster_Status} eq 'Pass' } @clusters), "\n";
 print STDERR "[INFO] LowSupport clusters: ",
     scalar(grep { $_->{Cluster_Status} eq 'LowSupport' } @clusters), "\n";
-print STDERR "[INFO] Assignments: $assignments_out\n";
 print STDERR "[INFO] Clusters: $clusters_out\n";
 exit 0;
 
@@ -194,30 +185,12 @@ sub build_cluster {
         Min_Insert_Size => min_num(@insert_sizes),
         Max_Insert_Size => max_num(@insert_sizes),
         Pair_Orientation_Count => format_count_hash(\%orientation_count),
-        records => [@records],
     };
 }
 
 # ------------------------------------------------------------------
 # Output writers
 # ------------------------------------------------------------------
-
-sub write_assignments {
-    my ($file, $clusters_ref) = @_;
-    open my $fh, '>', $file or die "[ERROR] Cannot write $file: $!\n";
-    print {$fh} "Pair_ID\tCluster_ID\tCluster_Status\n";
-
-    for my $cluster (@$clusters_ref) {
-        for my $pair (@{ $cluster->{records} }) {
-            print {$fh} join("\t",
-                $pair->{Pair_ID},
-                $cluster->{Cluster_ID},
-                $cluster->{Cluster_Status},
-            ), "\n";
-        }
-    }
-    close $fh;
-}
 
 sub write_clusters {
     my ($file, $clusters_ref) = @_;
@@ -349,5 +322,5 @@ sub validate_nonnegative_integer {
 }
 
 sub usage {
-    return "Usage: perl ClusterDiscordantReads.pl --Config CONF --Input discordant_pairs.tsv --AssignmentsOut discordant_cluster_assignments.tsv --ClustersOut discordant_clusters.tsv\n";
+    return "Usage: perl ClusterDiscordantReads.pl --Config CONF --Input discordant_pairs.tsv --ClustersOut discordant_clusters.tsv\n";
 }
