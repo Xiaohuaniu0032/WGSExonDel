@@ -382,6 +382,95 @@ def read_tsv(path):
     )
 
 
+def map_discordant_pairs_to_clusters(pair_df, cluster_df):
+    """Reconstruct Pair_ID-to-Cluster_ID links without an assignment TSV.
+
+    The cluster summary stores the observed Start_Range and End_Range for
+    every cluster. A pair must fall within both ranges on the same chromosome.
+    If ranges overlap, choose the cluster with the nearest median interval.
+    """
+
+    required_pair = {"Pair_ID", "Chrom", "Start", "End"}
+    required_cluster = {
+        "Cluster_ID", "Cluster_Status", "Chrom", "Start", "End",
+        "Start_Range", "End_Range"
+    }
+
+    missing_pair = required_pair.difference(pair_df.columns)
+    missing_cluster = required_cluster.difference(cluster_df.columns)
+    if missing_pair:
+        die("discordant_pairs.tsv missing columns: " + ", ".join(sorted(missing_pair)))
+    if missing_cluster:
+        die("discordant_clusters.tsv missing columns: " + ", ".join(sorted(missing_cluster)))
+
+    clusters_by_chrom = {}
+    for _, cluster in cluster_df.iterrows():
+        try:
+            start_min, start_max = [int(x) for x in str(cluster["Start_Range"]).split("-", 1)]
+            end_min, end_max = [int(x) for x in str(cluster["End_Range"]).split("-", 1)]
+            center_start = int(cluster["Start"])
+            center_end = int(cluster["End"])
+        except (TypeError, ValueError):
+            die(f"Invalid coordinate range in discordant cluster {cluster.get('Cluster_ID', 'NA')}")
+
+        clusters_by_chrom.setdefault(str(cluster["Chrom"]), []).append({
+            "Cluster_ID": str(cluster["Cluster_ID"]),
+            "Cluster_Status": str(cluster["Cluster_Status"]),
+            "Start_Min": start_min,
+            "Start_Max": start_max,
+            "End_Min": end_min,
+            "End_Max": end_max,
+            "Center_Start": center_start,
+            "Center_End": center_end,
+        })
+
+    cluster_ids = []
+    cluster_statuses = []
+    unmatched = 0
+
+    for _, pair in pair_df.iterrows():
+        try:
+            pair_start = int(pair["Start"])
+            pair_end = int(pair["End"])
+        except (TypeError, ValueError):
+            cluster_ids.append(pd.NA)
+            cluster_statuses.append(pd.NA)
+            unmatched += 1
+            continue
+
+        candidates = [
+            cluster for cluster in clusters_by_chrom.get(str(pair["Chrom"]), [])
+            if cluster["Start_Min"] <= pair_start <= cluster["Start_Max"]
+            and cluster["End_Min"] <= pair_end <= cluster["End_Max"]
+        ]
+
+        if not candidates:
+            cluster_ids.append(pd.NA)
+            cluster_statuses.append(pd.NA)
+            unmatched += 1
+            continue
+
+        selected = min(
+            candidates,
+            key=lambda cluster: (
+                abs(pair_start - cluster["Center_Start"])
+                + abs(pair_end - cluster["Center_End"]),
+                cluster["Cluster_ID"],
+            ),
+        )
+        cluster_ids.append(selected["Cluster_ID"])
+        cluster_statuses.append(selected["Cluster_Status"])
+
+    result = pair_df.copy()
+    result["Cluster_ID"] = cluster_ids
+    result["Cluster_Status"] = cluster_statuses
+
+    if unmatched:
+        info(f"{unmatched} discordant read pairs could not be mapped to a cluster and will be excluded from cluster-level plotting")
+
+    return result.dropna(subset=["Cluster_ID"]).copy()
+
+
 # ============================================================
 # GTF
 # ============================================================
@@ -767,14 +856,6 @@ def discover_files(
             / "discordant_pairs.tsv",
 
             ["discordant_pairs.tsv"]
-        )
-    )
-
-    files["dr_assignments"] = (
-        find_exact_or_recursive(
-            input_dir,
-            Path("S4_DiscordantReads") / "discordant_cluster_assignments.tsv",
-            ["discordant_cluster_assignments.tsv"]
         )
     )
 
@@ -2969,8 +3050,6 @@ def main():
 
         "dr_pairs",
 
-        "dr_assignments",
-
         "depth_ratio",
 
         "cusum"
@@ -3031,11 +3110,9 @@ def main():
     )
 
     dr_pair_df = read_tsv(files["dr_pairs"])
-    dr_assignment_df = read_tsv(files["dr_assignments"])
-    dr_pairs_df = dr_pair_df.merge(
-        dr_assignment_df,
-        on="Pair_ID",
-        how="inner"
+    dr_pairs_df = map_discordant_pairs_to_clusters(
+        dr_pair_df,
+        dr_cluster_df
     )
 
     depth_df = read_tsv(

@@ -32,8 +32,8 @@ use FindBin qw($Bin);
 #   Step 02. cusum_depth_evidence
 #   Step 03. plot_depth_ratio
 #   Step 04. extract_raw_sa_reads
-#   Step 05. annotate_split_read_breakpoints
-#   Step 06. cluster_split_reads
+#   Step 05. identify_split_read_deletions
+#   Step 06. cluster_split_deletion_events
 #   Step 07. extract_valid_tlen
 #   Step 08. plot_tlen_distribution
 #   Step 09. extract_discordant_pairs
@@ -484,20 +484,21 @@ sub write_sample_shell {
         shell_quote($perl),
         shell_quote($script_ref->{split_identify}),
         "--Input", shell_quote($out_ref->{split_reads}),
-        "--Out",   shell_quote($out_ref->{split_reads}),
+        "--Out",   shell_quote($out_ref->{split_events}),
     );
-    write_cmd($SH, "Step 05: annotate_split_read_breakpoints", $cmd,
-        "$dir_ref->{log}/05.annotate_split_read_breakpoints.log");
+    write_cmd($SH, "Step 05: identify_split_read_deletions", $cmd,
+        "$dir_ref->{log}/05.identify_split_deletions.log");
 
     $cmd = join(
         " ",
         shell_quote($perl),
         shell_quote($script_ref->{split_cluster}),
-        "--Config",      shell_quote($config),
-        "--Input",       shell_quote($out_ref->{split_reads}),
-        "--ClustersOut", shell_quote($out_ref->{split_clusters}),
+        "--Config",       shell_quote($config),
+        "--Input",        shell_quote($out_ref->{split_events}),
+        "--AssignmentsOut", shell_quote($out_ref->{split_assignments}),
+        "--ClustersOut",  shell_quote($out_ref->{split_clusters}),
     );
-    write_cmd($SH, "Step 06: cluster_split_reads", $cmd,
+    write_cmd($SH, "Step 06: cluster_split_deletion_events", $cmd,
         "$dir_ref->{log}/06.cluster_split_reads.log");
 
     if ($run_tlen_qc) {
@@ -562,7 +563,6 @@ sub write_sample_shell {
         shell_quote($script_ref->{discordant_cluster}),
         "--Config",         shell_quote($config),
         "--Input",          shell_quote($out_ref->{discordant_pairs}),
-        "--AssignmentsOut", shell_quote($out_ref->{discordant_assignments}),
         "--ClustersOut",    shell_quote($out_ref->{discordant_clusters}),
     );
     write_cmd($SH, "Step 10: cluster_discordant_pairs", $cmd,
@@ -607,10 +607,11 @@ sub write_sample_shell {
     print $SH "echo \"[INFO] Window candidates: $out_ref->{window_candidates}\"\n";
     print $SH "echo \"[INFO] CUSUM events: $out_ref->{cusum_events}\"\n";
     print $SH "echo \"[INFO] Depth-ratio plot: $out_ref->{depth_plot_pdf}\"\n";
-    print $SH "echo \"[INFO] Annotated split reads: $out_ref->{split_reads}\"\n";
+    print $SH "echo \"[INFO] Raw split reads: $out_ref->{split_reads}\"\n";
+    print $SH "echo \"[INFO] Split deletion events: $out_ref->{split_events}\"\n";
+    print $SH "echo \"[INFO] Split cluster assignments: $out_ref->{split_assignments}\"\n";
     print $SH "echo \"[INFO] Split clusters: $out_ref->{split_clusters}\"\n";
     print $SH "echo \"[INFO] Filtered discordant pairs: $out_ref->{discordant_pairs}\"\n";
-    print $SH "echo \"[INFO] Discordant cluster assignments: $out_ref->{discordant_assignments}\"\n";
     print $SH "echo \"[INFO] Discordant clusters: $out_ref->{discordant_clusters}\"\n";
     print $SH "echo \"[INFO] Depth candidates: $out_ref->{depth_candidates}\"\n";
     print $SH "echo \"[INFO] Split candidates: $out_ref->{split_candidates}\"\n";
@@ -658,8 +659,8 @@ set -euo pipefail
 #   Step 02. cusum_depth_evidence
 #   Step 03. plot_depth_ratio
 #   Step 04. extract_raw_sa_reads
-#   Step 05. annotate_split_read_breakpoints
-#   Step 06. cluster_split_reads
+#   Step 05. identify_split_read_deletions
+#   Step 06. cluster_split_deletion_events
 #   Step 07. extract_valid_tlen
 #   Step 08. plot_tlen_distribution
 #   Step 09. extract_discordant_pairs
@@ -730,13 +731,14 @@ sub build_sample_outputs {
         depth_plot_pdf         => "$dir_ref->{depth}/depth_ratio.pdf",
 
         split_reads            => "$dir_ref->{split}/split_reads.tsv",
+        split_events           => "$dir_ref->{split}/split_deletion_events.tsv",
+        split_assignments      => "$dir_ref->{split}/split_cluster_assignments.tsv",
         split_clusters         => "$dir_ref->{split}/split_clusters.tsv",
 
         valid_tlen_tmp         => "$dir_ref->{discordant}/.valid_tlen.tmp.tsv",
         tlen_plot_pdf          => "$dir_ref->{discordant}/tlen_distribution.pdf",
         tlen_summary           => "$dir_ref->{discordant}/tlen_summary.tsv",
         discordant_pairs       => "$dir_ref->{discordant}/discordant_pairs.tsv",
-        discordant_assignments => "$dir_ref->{discordant}/discordant_cluster_assignments.tsv",
         discordant_clusters    => "$dir_ref->{discordant}/discordant_clusters.tsv",
 
         depth_candidates       => "$dir_ref->{candidate}/depth_candidates.tsv",
@@ -1347,8 +1349,8 @@ Workflow:
   Step 02. Run CUSUM depth analysis
   Step 03. Generate depth-ratio plot
   Step 04. Extract raw SA split reads
-  Step 05. Annotate split-read breakpoints in split_reads.tsv
-  Step 06. Cluster valid split-read deletion records
+  Step 05. Identify split-read deletion events
+  Step 06. Cluster split-read deletion events
   Step 07. Extract TLEN values (optional)
   Step 08. Plot TLEN distribution (optional)
   Step 09. Extract and filter Discordant read pairs directly from BAM
