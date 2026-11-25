@@ -1,0 +1,81 @@
+﻿Gene,Disease,MOI,SOP,Contribution,Classification,"Last Eval."
+ABCC9HGNC:60,"Brugada syndrome  MONDO:0015263",AD,SOP11,Primary,Disputed,10/28/2025
+ACTA2HGNC:130,"multisystemic smooth muscle dysfunction syndrome  MONDO:0013452",AD,SOP11,Primary,Definitive,01/24/2025
+ACTN2HGNC:164,"ACTN2-related cardiac and skeletal myopathy  MONDO:0700349",AD,SOP11,Primary,Definitive,07/23/2025
+ALG10BHGNC:31088,"long QT syndrome  MONDO:0002442",AD,SOP11,Primary,Limited,01/15/2026
+ALPK3HGNC:17574,"hypertrophic cardiomyopathy  MONDO:0005045",AR,SOP8,Primary,Definitive,02/09/2022
+ALPK3HGNC:17574,"hypertrophic cardiomyopathy  MONDO:0005045",AD,SOP9,Primary,Strong,01/16/2025
+ANKRD1HGNC:15819,"hypertrophic cardiomyopathy  MONDO:0005045",AD,SOP9,Primary,Disputed,02/08/2023
+BGNHGNC:1044,"Meester-Loeys syndrome  MONDO:0010515",XL,SOP11,Primary,Strong,02/06/2026
+CACNA1CHGNC:1390,"Timothy syndrome  MONDO:0010979",AD,SOP9,Primary,Definitive,04/14/2023
+CACNA1CHGNC:1390,"Brugada syndrome  MONDO:0015263",AD,SOP11,Primary,Disputed,02/25/2025
+CACNB2HGNC:1402,"cardiogenetic disease  MONDO:0100547",AD,SOP11,Primary,Disputed,07/22/2025
+CALR3HGNC:20407,"hypertrophic cardiomyopathy  MONDO:0005045",AD,SOP9,Primary,Disputed,01/11/2023
+CASQ2HGNC:1513,"hypertrophic cardiomyopathy  MONDO:0005045",AD,SOP9,Primary,Disputed,05/10/2022
+CSRP3HGNC:2472,"hypertrophic cardiomyopathy  MONDO:0005045",SD,SOP9,Primary,Definitive,08/09/2023
+DSPHGNC:3052,"hypertrophic cardiomyopathy  MONDO:0005045",AD,SOP9,Primary,Disputed,06/22/2022
+EFEMP2HGNC:3219,"cutis laxa, autosomal recessive, type 1B  MONDO:0013754",AR,SOP11,Primary,Definitive,08/23/2024
+ELNHGNC:3327,"cutis laxa, autosomal dominant 1  MONDO:0007411",AD,SOP11,Primary,Definitive,10/04/2024
+EMILIN1HGNC:19880,"arterial tortuosity-bone fragility syndrome  MONDO:0971179",AR,SOP11,Primary,Definitive,06/05/2025
+FBN1HGNC:3603,"Marfan syndrome  MONDO:0007947",AD,SOP11,Primary,Definitive,12/19/2025
+FBN2HGNC:3604,"congenital contractural arachnodactyly  MONDO:0007363",AD,SOP11,Primary,Definitive,11/07/2025
+FGF12HGNC:3668,"Brugada syndrome  MONDO:0015263",AD,SOP11,Primary,Disputed,01/15/2026
+FHOD3HGNC:26178,"hypertrophic cardiomyopathy  MONDO:0005045",AD,SOP9,Primary,Definitive,09/29/2023
+FLNCHGNC:3756,"myofibrillar myopathy  MONDO:0018943",AD,SOP9,Primary,Definitive,10/26/2023
+FOXE3HGNC:3808,"familial thoracic aortic aneurysm and aortic dissection  MONDO:0019625",AD,SOP12,Primary,Limited,06/19/2026
+HCN4HGNC:16882,"sick sinus syndrome 2, autosomal dominant  MONDO:0008102",AD,SOP11,Primary,Definitive,06/24/2025
+JPH2HGNC:14202,"hypertrophic cardiomyopathy  MONDO:0005045",AD,SOP9,Primary,Moderate,10/12/2022
+KCNE3HGNC:6243,"Brugada syndrome  MONDO:0015263",AD,SOP11,Primary,Disputed,07/22/2025
+KCNH2HGNC:6251,"Brugada syndrome  MONDO:0015263",AD,SOP11,Primary,Disputed,06/10/2025
+KCNJ8HGNC:6269,"Brugada syndrome  MONDO:0015263",AD,SOP11,Primary,Disputed,12/10/2025
+KCNQ1HGNC:6294,"hypertrophic cardiomyopathy  MONDO:0005045",AD,SOP8,Primary,Disputed,05/09/2022
+KIF20AHGNC:9787,"congenital heart disease  MONDO:0005453",AR,SOP10,Primary,Limited,06/27/2024
+KLF10HGNC:11810,"hypertrophic cardiomyopathy  MONDO:0005045",AD,SOP9,Primary,Limited,09/14/2022
+KLHL24HGNC:25947,"hypertrophic cardiomyopathy  MONDO:0005045",AR,SOP9,Primary,Moderate,09/28/2023
+LDB3HGNC:15710,"hypertrophic cardiomyopathy  MONDO:0005045",AD,SOP11,Primary,Disputed,01/27/2026
+MAT2AHGNC:6904,"familial thoracic aortic aneurysm and aortic dissection  MONDO:0019625",AD,SOP11,Primary,Limited,12/05/2025
+MT-TIHGNC:7488,"hypertrophic cardiomyopathy  MONDO:0005045",MT,SOP9,Primary,Moderate,12/18/2023
+MYBPC3HGNC:7551,"hypertrophic cardiomyopathy  MONDO:0005045",AD,SOP8,Primary,Definitive,10/07/2021
+MYH6HGNC:7576,"hypertrophic cardiomyopathy  MONDO:0005045",AD,SOP9,Primary,Disputed,07/12/2023
+MYH7HGNC:7577,"hypertrophic cardiomyopathy  MONDO:0005045",AD,SOP9,Primary,Definitive,07/12/2023
+MYL2HGNC:7583,"hypertrophic cardiomyopathy  MONDO:0005045",AD,SOP11,Primary,Definitive,01/13/2026
+MYLK2HGNC:16243,"hypertrophic cardiomyopathy  MONDO:0005045",AD,SOP9,Primary,Disputed,02/08/2023
+MYOM1HGNC:7613,"hypertrophic cardiomyopathy  MONDO:0005045",AD,SOP9,Primary,Disputed,02/23/2023
+MYOZ2HGNC:1330,"hypertrophic cardiomyopathy  MONDO:0005045",AD,SOP9,Primary,Disputed,10/27/2022
+MYPNHGNC:23246,"hypertrophic cardiomyopathy  MONDO:0005045",AD,SOP9,Primary,Disputed,06/14/2023
+NEXNHGNC:29557,"hypertrophic cardiomyopathy  MONDO:0005045",AD,SOP9,Primary,Limited,03/23/2023
+NKX2-5HGNC:2488,"NKX2.5-related congenital, conduction and myopathic heart disease  MONDO:0800441",AD,SOP9,Secondary,Definitive,11/07/2024
+NOTCH1HGNC:7881,"NOTCH1-related AOS spectrum disorder  MONDO:1060150",AD,SOP11,Primary,Definitive,03/07/2025
+OBSCNHGNC:15719,"hypertrophic cardiomyopathy  MONDO:0005045",AD,SOP9,Primary,Limited,04/13/2022
+PDLIM3HGNC:20767,"hypertrophic cardiomyopathy  MONDO:0005045",AD,SOP9,Primary,Limited,02/23/2023
+PRKAG2HGNC:9386,"PRKAG2-related cardiomyopathy  MONDO:0800484",AD,SOP9,Primary,Definitive,06/14/2022
+RANGRFHGNC:17679,"Brugada syndrome  MONDO:0015263",AD,SOP11,Primary,Refuted,10/31/2025
+RBM20HGNC:27424,"hypertrophic cardiomyopathy  MONDO:0005045",AD,SOP9,Primary,Limited,10/26/2023
+ROBO4HGNC:17985,"aortic valve disease 3  MONDO:0032783",AD,SOP11,Secondary,Moderate,01/24/2025
+RPS6KB1HGNC:10436,"hypertrophic cardiomyopathy  MONDO:0005045",AD,SOP9,Primary,Limited,09/13/2023
+RYR2HGNC:10484,"hypertrophic cardiomyopathy  MONDO:0005045",AD,SOP9,Primary,Limited,12/14/2022
+RYR2HGNC:10484,"catecholaminergic polymorphic ventricular tachycardia  MONDO:0017990",AD,SOP7,Secondary,Definitive,01/20/2021
+SCN10AHGNC:10582,"Brugada syndrome  MONDO:0015263",AD,SOP11,Primary,Disputed,09/10/2025
+SCN3BHGNC:20665,"Brugada syndrome  MONDO:0015263",AD,SOP11,Primary,Refuted,12/16/2025
+SCN3BHGNC:20665,"atrial fibrillation  MONDO:0004981",AD,SOP11,Primary,Disputed,01/05/2026
+SCN5AHGNC:10593,"SCN5A-related cardiac rhythm disorder  MONDO:1010181",AD,SOP11,Primary,Definitive,10/08/2025
+SKIHGNC:10896,"Shprintzen-Goldberg syndrome  MONDO:0008426",AD,SOP10,Secondary,Definitive,07/23/2024
+SLC2A10HGNC:13444,"arterial tortuosity syndrome  MONDO:0008818",AR,SOP11,Primary,Definitive,11/07/2024
+SLMAPHGNC:16643,"Brugada syndrome  MONDO:0015263",AD,SOP11,Primary,Refuted,01/15/2026
+SMAD2HGNC:6768,"Loeys-Dietz syndrome 6  MONDO:0030500",AD,SOP11,Primary,Definitive,08/01/2025
+TAFAZZINHGNC:11577,"Barth syndrome  MONDO:0010543",XL,SOP7,Secondary,Definitive,02/12/2021
+TBX5HGNC:11604,"Holt-Oram syndrome  MONDO:0007732",AD,SOP11,Secondary,Definitive,03/25/2025
+TCAPHGNC:11610,"hypertrophic cardiomyopathy  MONDO:0005045",AD,SOP9,Primary,Disputed,09/14/2022
+THSD4HGNC:25835,"familial thoracic aortic aneurysm and aortic dissection  MONDO:0019625",AD,SOP12,Primary,Limited,09/04/2026
+TMEM168HGNC:25826,"Brugada syndrome  MONDO:0015263",AD,SOP11,Primary,Disputed,01/15/2026
+TMPOHGNC:11875,"hypertrophic cardiomyopathy  MONDO:0005045",AD,SOP9,Primary,Limited,04/27/2023
+TNNC1HGNC:11943,"hypertrophic cardiomyopathy  MONDO:0005045",AD,SOP9,Primary,Definitive,09/13/2023
+TNNC2HGNC:11944,"hypertrophic cardiomyopathy  MONDO:0005045",AD,SOP9,Primary,"No Known Disease Relationship",04/12/2023
+TPM1HGNC:12010,"hypertrophic cardiomyopathy  MONDO:0005045",AD,SOP10,Primary,Definitive,12/18/2023
+TRIM63HGNC:16007,"hypertrophic cardiomyopathy  MONDO:0005045",AD,SOP9,Primary,Disputed,10/27/2022
+TRIM63HGNC:16007,"hypertrophic cardiomyopathy  MONDO:0005045",AR,SOP10,Primary,Moderate,06/06/2024
+TRPM4HGNC:17993,"Brugada syndrome  MONDO:0015263",AD,SOP11,Primary,Refuted,12/16/2025
+TTNHGNC:12403,"arrhythmogenic right ventricular cardiomyopathy  MONDO:0016587",AD,SOP11,Primary,Disputed,10/28/2025
+TTNHGNC:12403,"hypertrophic cardiomyopathy  MONDO:0005045",AD,SOP11,Primary,Limited,10/28/2025
+VCLHGNC:12665,"hypertrophic cardiomyopathy  MONDO:0005045",AD,SOP9,Primary,Disputed,05/10/2023
+,,,,,,
