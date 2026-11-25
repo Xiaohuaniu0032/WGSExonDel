@@ -5,7 +5,7 @@ use FindBin qw($Bin);
 
 my $file = "$Bin/../../db/MANE/MANE.GRCh38.v1.4.Summary.txt";
 
-print "name\tRefSeq_prot\tMANE_status\n";
+print "Gene\tTranscript\tMANE_status\n";
 
 open my $IN, "<", $file or die "[ERROR] Cannot open MANE summary: $file\n";
 <$IN>;
