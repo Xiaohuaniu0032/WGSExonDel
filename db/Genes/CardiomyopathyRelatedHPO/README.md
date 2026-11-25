@@ -1,141 +1,69 @@
-# HPO phenotype_to_genes.txt Download Guide
+# Cardiomyopathy-Related HPO Gene Lists
 
-## 1. Data Source
+This directory contains HPO-associated gene lists for hypertrophic cardiomyopathy (HCM) and dilated cardiomyopathy (DCM).
 
-`phenotype_to_genes.txt` is a gene--phenotype association file released
-by the Human Phenotype Ontology (HPO) project. It provides associations
-between HPO terms, genes, and related diseases.
+## Files
 
--   **Data source:** [Human Phenotype Ontology
-    (HPO)](https://github.com/obophenotype/human-phenotype-ontology)
--   **Version:** `v2026-09-01`
--   **Official release:**
-    https://github.com/obophenotype/human-phenotype-ontology/releases/tag/v2026-09-01
--   **Official file documentation:**
-    https://github.com/obophenotype/human-phenotype-ontology/blob/v2026-09-01/docs/annotations/phenotype_to_genes.md
+| File | Description |
+|---|---|
+| `HPOTerms.tsv` | Defines the HPO terms to extract. It contains the HPO ID and term name for HCM (`0001639`, Hypertrophic cardiomyopathy) and DCM (`0001644`, Dilated cardiomyopathy). |
+| `HypertrophicCardiomyopathy.genes` | Genes associated with the HCM HPO term in the HPO gene-phenotype annotation file. |
+| `DilatedCardiomyopathy.genes` | Genes associated with the DCM HPO term in the HPO gene-phenotype annotation file. |
 
-## 2. Download Instructions
+`HPOTerms.tsv` acts as the term list for extraction. The `ExtractHPOAssociatedGenes.pl` script reads the terms in this file and selects the corresponding gene-disease associations from the HPO `phenotype_to_genes.txt` file. In the current script implementation, matching is performed using the HPO term name (`hpo_name`), so the term names in `HPOTerms.tsv` must match those in the HPO annotation file.
 
-### 2.1 Download Using Linux Command Line
+## Data Source
 
-Use `wget` to download the file from the specified HPO release:
+The gene-phenotype associations are obtained from the Human Phenotype Ontology (HPO) project.
 
-``` bash
-wget -c \
-  -O phenotype_to_genes.txt \
+- **Source:** [Human Phenotype Ontology](https://github.com/obophenotype/human-phenotype-ontology)
+- **Version:** `v2026-09-01`
+- **Release:** [HPO v2026-09-01](https://github.com/obophenotype/human-phenotype-ontology/releases/tag/v2026-09-01)
+- **Input file:** [`phenotype_to_genes.txt`](https://github.com/obophenotype/human-phenotype-ontology/releases/download/v2026-09-01/phenotype_to_genes.txt)
+
+Download the annotation file:
+
+```bash
+wget -c -O phenotype_to_genes.txt \
   https://github.com/obophenotype/human-phenotype-ontology/releases/download/v2026-09-01/phenotype_to_genes.txt
 ```
 
-Alternatively, use `curl`:
+## Generate the Gene Lists
 
-``` bash
-curl -L \
-  -o phenotype_to_genes.txt \
-  https://github.com/obophenotype/human-phenotype-ontology/releases/download/v2026-09-01/phenotype_to_genes.txt
+Run the following command from the repository root. The script uses `HPOTerms.tsv` to determine which HPO terms to extract and writes one gene list for each term.
+
+```bash
+mkdir -p tmp/CardiomyopathyRelatedHPO
+
+perl scripts/HPO/ExtractHPOAssociatedGenes.pl \
+  --gene-file phenotype_to_genes.txt \
+  --term-file db/Genes/CardiomyopathyRelatedHPO/HPOTerms.tsv \
+  --outdir tmp/CardiomyopathyRelatedHPO
 ```
 
-Options:
+The script generates:
 
--   `-c`: Resume an interrupted download (`wget`).
--   `-L`: Follow HTTP redirects (`curl`).
--   `-O` or `-o`: Specify the output filename.
+- `Hypertrophic_cardiomyopathy.genes`
+- `Dilated_cardiomyopathy.genes`
 
-### 2.2 Download Using a Web Browser
+The filenames in this directory use the repository's standardized CamelCase naming convention. To place the generated files here with those names:
 
-1.  Open the official HPO release page:\
-    https://github.com/obophenotype/human-phenotype-ontology/releases/tag/v2026-09-01
-2.  Expand the **Assets** section.
-3.  Locate `phenotype_to_genes.txt`.
-4.  Click the filename to download the file.
+```bash
+cp tmp/CardiomyopathyRelatedHPO/Hypertrophic_cardiomyopathy.genes \
+  db/Genes/CardiomyopathyRelatedHPO/HypertrophicCardiomyopathy.genes
 
-**Note:** Download `phenotype_to_genes.txt` directly from the release
-assets rather than downloading the entire source code archive.
-
-## 3. File Format
-
-The file is a tab-delimited text file (TSV) containing five columns.
-
-  Column           Description
-  ---------------- ------------------------------------------------------
-  `hpo_id`         HPO term identifier
-  `hpo_name`       HPO term name
-  `ncbi_gene_id`   NCBI Gene identifier
-  `gene_symbol`    Gene symbol
-  `disease_id`     Associated disease identifier, such as OMIM or ORPHA
-
-Example:
-
-``` text
-hpo_id  hpo_name    ncbi_gene_id    gene_symbol disease_id
-HP:0009830  Peripheral neuropathy   773 CACNA1A OMIM:183086
-HP:0009830  Peripheral neuropathy   87178   PNPT1   ORPHA:101111
-HP:0009830  Peripheral neuropathy   87178   PNPT1   ORPHA:319514
-HP:0009830  Peripheral neuropathy   87178   PNPT1   OMIM:608703
+cp tmp/CardiomyopathyRelatedHPO/Dilated_cardiomyopathy.genes \
+  db/Genes/CardiomyopathyRelatedHPO/DilatedCardiomyopathy.genes
 ```
 
-The actual file uses tab characters to separate columns. The example
-above illustrates the file structure.
+## Output Format
 
-## 4. Usage and Important Notes
+The generated files are tab-delimited and contain three columns:
 
-1.  A single HPO term can be associated with multiple genes.
-2.  A gene may be associated with multiple diseases. Consequently, the
-    same HPO term and gene symbol may appear in multiple rows.
-3.  The file includes associations involving ancestor phenotype terms,
-    not only the most specific phenotypes directly annotated to a
-    disease.
-4.  According to the official documentation, the file includes phenotype
-    associations restricted to descendants of `Phenotypic abnormality`
-    (`HP:0000118`).
-5.  Keep the HPO data version consistent with the version used in
-    downstream analyses to ensure reproducibility and traceability.
+| Column | Description |
+|---|---|
+| `Gene` | Gene symbol |
+| `Evidence` | HPO term name associated with the gene |
+| `Note` | Associated disease identifier, such as an OMIM or ORPHA ID |
 
-## 5. Verify the Downloaded File
-
-Check that the file exists and inspect its size:
-
-``` bash
-ls -lh phenotype_to_genes.txt
-```
-
-Display the first five lines:
-
-``` bash
-head -n 5 phenotype_to_genes.txt
-```
-
-Check the number of tab-delimited fields in the first five lines:
-
-``` bash
-awk -F '\t' 'NR<=5 {print NF}' phenotype_to_genes.txt
-```
-
-Each data row should contain five columns. If the file includes a
-header, the header should also contain five columns.
-
-## 6. Data Version Management
-
-To maintain traceability across releases, store each HPO version
-separately rather than overwriting previously downloaded data.
-
-Recommended directory structure:
-
-``` text
-human-phenotype-ontology/
-├── v2026-09-01/
-│   └── phenotype_to_genes.txt
-└── README.md
-```
-
-When updating the dataset, check the official HPO release page for the
-latest version and replace `v2026-09-01` in the download URL with the
-desired release tag.
-
-## 7. References
-
--   HPO official repository:
-    https://github.com/obophenotype/human-phenotype-ontology
--   HPO v2026-09-01 release:
-    https://github.com/obophenotype/human-phenotype-ontology/releases/tag/v2026-09-01
--   Official documentation for `phenotype_to_genes.txt`:
-    https://github.com/obophenotype/human-phenotype-ontology/blob/v2026-09-01/docs/annotations/phenotype_to_genes.md
+The script removes duplicate gene-disease associations within each output file. A gene may therefore appear in multiple rows when it is associated with multiple diseases.
