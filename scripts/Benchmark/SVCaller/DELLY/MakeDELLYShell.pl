@@ -1,8 +1,10 @@
+
 #!/usr/bin/env perl
+
 use strict;
 use warnings;
 use Getopt::Long;
-use File::Basename;
+use File::Basename qw(basename);
 use File::Path qw(make_path);
 use Cwd qw(abs_path);
 
@@ -22,14 +24,18 @@ $delly ||= "delly";
 die "[ERROR] BAM list not found: $bam_list\n" unless -f $bam_list;
 die "[ERROR] Reference fasta not found: $ref\n" unless -f $ref;
 
-$outdir = abs_path($outdir) || $outdir;
-$ref    = abs_path($ref)    || $ref;
+# Resolve absolute paths
+$bam_list = abs_path($bam_list);
+$ref      = abs_path($ref);
 
 make_path($outdir) unless -d $outdir;
+$outdir = abs_path($outdir);
 
-open my $IN, "<", $bam_list or die "[ERROR] Cannot open $bam_list: $!\n";
+open my $IN, '<', $bam_list
+    or die "[ERROR] Cannot open $bam_list: $!\n";
 
 while (my $bam = <$IN>) {
+
     chomp $bam;
     $bam =~ s/^\s+|\s+$//g;
 
@@ -38,47 +44,54 @@ while (my $bam = <$IN>) {
 
     die "[ERROR] BAM not found: $bam\n" unless -f $bam;
 
-    my $bam_abs  = abs_path($bam) || $bam;
+    my $bam_abs  = abs_path($bam);
     my $bam_base = basename($bam);
 
+    # Extract sample ID from BAM filename
+    # Example:
+    # 25B09089386.final.merge.bam
+    # => 25B09089386
+    #
     # HCM_ACTN2_DEL_1000_2000_rep1.sorted.markdup.bam
     # => HCM_ACTN2_DEL_1000_2000_rep1
-    my $sample = $bam_base;
-    $sample =~ s/\.bam$//;
-    $sample =~ s/\.sorted\.markdup$//;
-    $sample =~ s/\.sort\.markdup$//;
-    $sample =~ s/\.markdup$//;
-    $sample =~ s/\.sorted$//;
-    $sample =~ s/\.sort$//;
 
-    # HCM_ACTN2_DEL_1000_2000_rep1
-    # => ACTN2
+    my ($sample) = split /\./, $bam_base;
+
+    die "[ERROR] Cannot extract sample ID from BAM: $bam\n"
+        unless defined $sample && $sample ne "";
+
+    # Extract gene name from simulated sample
     my $gene;
+
     if ($sample =~ /^HCM_([^_]+)_DEL_/) {
         $gene = $1;
     } elsif ($sample =~ /^HCM_([^_]+)_/) {
         $gene = $1;
-    } else {
-        die "[ERROR] Cannot parse gene name from sample: $sample\n";
     }
 
-    my $gene_dir   = "$outdir/$gene";
-    my $sample_dir = "$gene_dir/$sample";
+    # Set output directory
+    # Simulated data: OUTDIR/GENE/SAMPLE
+    # Real WGS data:  OUTDIR/SAMPLE
+
+    my $sample_dir = defined $gene
+        ? "$outdir/$gene/$sample"
+        : "$outdir/$sample";
 
     make_path($sample_dir) unless -d $sample_dir;
 
     my $sh  = "$sample_dir/run_delly_$sample.sh";
     my $vcf = "$sample.delly.vcf";
 
-    open my $SH, ">", $sh or die "[ERROR] Cannot write $sh: $!\n";
+    open my $SH, '>', $sh
+        or die "[ERROR] Cannot write $sh: $!\n";
 
-    print $SH <<"EOF";
+    print {$SH} <<"EOF";
 #!/bin/bash
 set -euo pipefail
 
 cd "$sample_dir"
 
-$delly call \\
+"$delly" call \\
     -t DEL \\
     -g "$ref" \\
     "$bam_abs" \\
@@ -95,25 +108,28 @@ EOF
 
 close $IN;
 
+print "Done! DELLY shell scripts generated successfully.\n";
+
 sub usage {
-    return <<"USAGE";
+    return <<'USAGE';
 
 Usage:
-  perl MakeDELLYShell.pl \\
-    --bam-list all.bam \\
-    --outdir /path/to/delly_out \\
+  perl MakeDELLYShell.pl \
+    --bam-list all.bam \
+    --outdir /path/to/delly_out \
     --ref ref.fa
 
 Optional:
   --delly /path/to/delly
 
 Example:
-  perl MakeDELLYShell.pl \\
-    --bam-list all.bam \\
-    --outdir /path/to/SVCallerBenchmark/DELLY \\
-    --ref /path/to/ref.fa \\
+  perl MakeDELLYShell.pl \
+    --bam-list all.bam \
+    --outdir /path/to/SVCallerBenchmark/DELLY \
+    --ref /path/to/ref.fa \
     --delly delly
 
 USAGE
 }
+
 
