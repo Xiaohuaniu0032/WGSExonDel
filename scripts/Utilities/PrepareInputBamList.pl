@@ -1,3 +1,4 @@
+
 #!/usr/bin/env perl
 
 use strict;
@@ -9,32 +10,25 @@ use File::Basename qw(basename);
 my ($input_file, $output_file) = @ARGV;
 
 open my $IN, '<', $input_file
-    or die "Error: Cannot open input file '$input_file': $!\n";
+    or die "Error: Cannot open '$input_file': $!\n";
 
 open my $OUT, '>', $output_file
-    or die "Error: Cannot open output file '$output_file': $!\n";
+    or die "Error: Cannot open '$output_file': $!\n";
 
 while (my $bam_path = <$IN>) {
 
     chomp $bam_path;
     $bam_path =~ s/\r$//;
-    $bam_path =~ s/^\s+|\s+$//;
 
-    next if $bam_path eq '';
+    next if $bam_path =~ /^\s*$/;
 
-    my $filename = basename($bam_path);
+    my ($sample_id) = split /\./, basename($bam_path);
 
-    my ($sample_id) = $filename =~ /^(.+)\.final\.merge\.bam$/;
-
-    die "Error: Invalid BAM filename at input line $.: $bam_path\n"
-        unless defined $sample_id;
-
-    print {$OUT} "$sample_id\t$bam_path\n"
-        or die "Error: Failed to write output file: $!\n";
+    print {$OUT} "$sample_id\t$bam_path\n";
 }
 
 close $IN;
-close $OUT or die "Error: Failed to close output file: $!\n";
+close $OUT;
 
 print "Done! Output file: $output_file\n";
 
